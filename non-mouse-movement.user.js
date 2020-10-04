@@ -4,12 +4,12 @@
 // @author       SArpnt
 // @version      1.0.0
 // @namespace    https://boxcrittersmods.ga/authors/sarpnt/
-// @homepage     https://boxcrittersmods.ga/projects/cardboard/
-// @updateURL    https://github.com/SArpnt/cardboard/raw/master/script.user.js
-// @downloadURL  https://github.com/SArpnt/cardboard/raw/master/script.user.js
-// @supportURL   https://github.com/SArpnt/cardboard/issues
-// @icon         https://github.com/SArpnt/cardboard/raw/master/icon16.png
-// @icon64       https://github.com/SArpnt/cardboard/raw/master/icon64.png
+// @homepage     https://boxcrittersmods.ga/mods/non-mouse-movement/
+// @updateURL    https://github.com/SArpnt/non-mouse-movement/raw/master/non-mouse-movement.user.js
+// @downloadURL  https://github.com/SArpnt/non-mouse-movement/raw/master/non-mouse-movement.user.js
+// @supportURL   https://github.com/SArpnt/non-mouse-movement/issues
+// @icon         https://github.com/SArpnt/non-mouse-movement/raw/master/icon16.png
+// @icon64       https://github.com/SArpnt/non-mouse-movement/raw/master/icon64.png
 // @run-at       document-end
 // @grant        none
 // @match        https://boxcritters.com/play/
@@ -32,19 +32,54 @@
 		KeyA: 'left',
 		KeyD: 'right',
 	};
-	let buttonMovement = {
+	let btnMove = { // directions to move with buttons
 		up: false,
 		down: false,
 		left: false,
 		right: false,
 	};
-	let keyFunction = v => ({ code: key }) => {
-		buttonMovement[buttonMap[key]] = v;
-		keyUpdate();
+	const RATE = 300; // rate to simulate click
+	const DISTANCE = 70; // distance to move every update
+
+	let curInt; // stores setInterval so it can be canceled
+	let keyFunction = v => e => {
+		let dir = buttonMap[e.code];
+		if (dir) {
+			e.preventDefault();
+			if (btnMove[dir] != v) {
+				btnMove[dir] = v;
+				clearInterval(curInt);
+				curInt = setTimeout(_ => {
+					curInt = setInterval(keyUpdate, RATE);
+					keyUpdate();
+				}, 10);
+			}
+		}
 	};
 	function keyUpdate() {
+		if (world) {
+			let p = world.room.playerCrumbs.find(e => e.i == world.player.playerId);
+			let pVis = world.stage.room.players[world.player.playerId];
+			let x = btnMove.right - btnMove.left;
+			let y = btnMove.down - btnMove.up;
+			if (true && !(x || y)) { // stop updating when no inputs given
+				clearInterval(curInt);
 
+				return;
+			}
+			x = x * DISTANCE + pVis.x;
+			y = y * DISTANCE + pVis.y;
+			if (Math.abs(p.x - x) + Math.abs(p.y - y) < 7) // if little to no movement made
+				clearInterval(curInt);
+			else
+				world.moveTo(x, y);
+		}
 	}
-	window.addEventListener('keydown', keyFunction(true));
-	window.addEventListener('keyup', keyFunction(false));
+	let stage = document.getElementById('stage');
+	stage.setAttribute('tabindex', '0');
+	stage.style.outline = 'none';
+	stage.focus();
+	stage.addEventListener('click', _ => stage.focus());
+	stage.addEventListener('keydown', keyFunction(true));
+	stage.addEventListener('keyup', keyFunction(false));
 })();
