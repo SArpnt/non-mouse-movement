@@ -40,6 +40,8 @@
 	};
 	const RATE = 300; // rate to simulate click
 	const DISTANCE = 70; // distance to move every update
+	const STOP = true; // stop player when no more input
+	const BUFFER_LENGTH = 120; // delay inputs if coming too fast
 
 	let curInt; // stores setInterval so it can be canceled
 	let keyFunction = v => e => {
@@ -64,7 +66,11 @@
 			let y = btnMove.down - btnMove.up;
 			if (true && !(x || y)) { // stop updating when no inputs given
 				clearInterval(curInt);
-
+				if (STOP)
+					moveTo(function () {
+						let pVis = world.stage.room.players[world.player.playerId];
+						return [pVis.x, pVis.y]
+					}); // function used because of input buffer
 				return;
 			}
 			x = x * DISTANCE + pVis.x;
@@ -72,9 +78,24 @@
 			if (Math.abs(p.x - x) + Math.abs(p.y - y) < 7) // if little to no movement made
 				clearInterval(curInt);
 			else
-				world.moveTo(x, y);
+				moveTo(x, y);
 		}
 	}
+	let lastInputTime = -Infinity;
+	let moveTimeout;
+	function moveTo(x, y) {
+		if (moveTimeout)
+			clearTimeout(moveTimeout);
+
+		moveTimeout = setTimeout(function () {
+			if (typeof x == 'function')
+				world.moveTo(...x());
+			else
+				world.moveTo(x, y);
+			lastInputTime = performance.now();
+		}, lastInputTime - performance.now() + BUFFER_LENGTH);
+	}
+
 	let stage = document.getElementById('stage');
 	stage.setAttribute('tabindex', '0');
 	stage.style.outline = 'none';
