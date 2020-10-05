@@ -2,7 +2,7 @@
 // @name         Non-mouse Movement
 // @description  Move with keyboard or controller
 // @author       SArpnt
-// @version      1.0.0
+// @version      2.0.0
 // @namespace    https://boxcrittersmods.ga/authors/sarpnt/
 // @homepage     https://boxcrittersmods.ga/mods/non-mouse-movement/
 // @updateURL    https://github.com/SArpnt/non-mouse-movement/raw/master/non-mouse-movement.user.js
@@ -38,47 +38,54 @@
 		left: false,
 		right: false,
 	};
+	let controllers = {};
+
 	const RATE = 300; // rate to simulate click
 	const DISTANCE = 70; // distance to move every update
 	const STOP = true; // stop player when no more input
 	const BUFFER_LENGTH = 120; // delay inputs if coming too fast
+	const DELAY = 10; // delays reading inputs so that movements aren't made when being spammed
+	const DEADZONE = .5; // distance on controller to ignore movement
 
-	let curInt; // stores setInterval so it can be canceled
 	let keyFunction = v => e => {
 		let dir = buttonMap[e.code];
 		if (dir) {
 			e.preventDefault();
 			if (btnMove[dir] != v) {
 				btnMove[dir] = v;
-				clearInterval(curInt);
-				curInt = setTimeout(_ => {
-					curInt = setInterval(keyUpdate, RATE);
-					keyUpdate();
-				}, 10);
+				startUpdate(btnMove);
 			}
 		}
 	};
-	function keyUpdate() {
+	let curInt; // stores setInterval so it can be canceled
+	function startUpdate(control) {
+		clearInterval(curInt);
+		curInt = setTimeout(_ => {
+			curInt = setInterval(_ => inputUpdate(control), RATE);
+			inputUpdate(control);
+		}, DELAY);
+	}
+	function inputUpdate(control) {
 		if (world) {
-			let p = world.room.playerCrumbs.find(e => e.i == world.player.playerId);
-			let pVis = world.stage.room.players[world.player.playerId];
-			let x = btnMove.right - btnMove.left;
-			let y = btnMove.down - btnMove.up;
-			if (true && !(x || y)) { // stop updating when no inputs given
-				clearInterval(curInt);
-				if (STOP)
-					moveTo(function () {
-						let pVis = world.stage.room.players[world.player.playerId];
-						return [pVis.x, pVis.y]
-					}); // function used because of input buffer
-				return;
+			let pVis = function (x = 0, y = 0) {
+				let p = world.stage.room.players[world.player.playerId];
+				return [p.x + x, p.y + y];
+			};
+			let x, y;
+			if (Array.isArray(control)) // controller
+				[x, y] = control;
+			else { // keyboard
+				x = btnMove.right - btnMove.left;
+				y = btnMove.down - btnMove.up;
 			}
-			x = x * DISTANCE + pVis.x;
-			y = y * DISTANCE + pVis.y;
-			if (Math.abs(p.x - x) + Math.abs(p.y - y) < 7) // if little to no movement made
-				clearInterval(curInt);
-			else
-				moveTo(x, y);
+			x *= DISTANCE;
+			y *= DISTANCE;
+			if (!(x || y)) { // when no inputs given
+				clearInterval(curInt); // stop updating
+				if (STOP)
+					moveTo(pVis); // function used because of input buffer
+			} else
+				moveTo(_ => pVis(x, y)); // function used because of input buffer
 		}
 	}
 	let lastInputTime = -Infinity;
@@ -89,13 +96,43 @@
 
 		moveTimeout = setTimeout(function () {
 			if (typeof x == 'function')
-				world.moveTo(...x());
-			else
+				[x, y] = x();
+
+			let p = world.room.playerCrumbs.find(e => e.i == world.player.playerId);
+			if (Math.abs(p.x - x) + Math.abs(p.y - y) < 7) // if little to no movement made
+				clearInterval(curInt); // stop updating
+			else {
 				world.moveTo(x, y);
-			lastInputTime = performance.now();
+				lastInputTime = performance.now();
+			};
 		}, lastInputTime - performance.now() + BUFFER_LENGTH);
 	}
 
+	createjs.Ticker.on("tick", function () {
+		if (!Object.keys(controllers).length) // if no controllers
+			return;
+		let g = navigator.getGamepads();
+		for (let i in controllers) {
+			let newIn = normalizeDead(g[i].axes.slice(0, 2)); // normalize
+			if (
+				!Array.isArray(controllers[i]) ||
+				!controllers[i].every((e, i) => e === newIn[i]) // if old isn't same as new
+			)
+				startUpdate( // move based on controller data
+					controllers[i] = newIn // set controller item
+				);
+		}
+	});
+
+	function normalizeDead(vec) {
+		let len = Math.sqrt(vec.map(e => e * e).reduce((a, b) => a + b));
+		return vec.map(len > DEADZONE ? (e => e / len) : (e => 0)); // normalized if outside deadzone
+	}
+
+	window.addEventListener("gamepadconnected", e => {
+		console.log(`Gamepad ${e.gamepad.index} connected`);
+		controllers[e.gamepad.index] = null;
+	});
 	let stage = document.getElementById('stage');
 	stage.setAttribute('tabindex', '0');
 	stage.style.outline = 'none';
