@@ -2,7 +2,7 @@
 // @name         Non-mouse Movement
 // @description  Move with keyboard or controller
 // @author       SArpnt
-// @version      2.0.0
+// @version      2.0.1
 // @namespace    https://boxcrittersmods.ga/authors/sarpnt/
 // @homepage     https://boxcrittersmods.ga/mods/non-mouse-movement/
 // @updateURL    https://github.com/SArpnt/non-mouse-movement/raw/master/non-mouse-movement.user.js
@@ -22,6 +22,13 @@
 
 (function () {
 	'use strict';
+
+	const cRegister = _ => cardboard.register('nonMouseMovement', undefined, false, GM_info);
+	if (window.cardboard)
+		cRegister();
+	else
+		window.addEventListener('cardboardLoaded', cRegister);
+
 	let buttonMap = {
 		ArrowUp: 'up',
 		ArrowDown: 'down',
@@ -40,12 +47,13 @@
 	};
 	let controllers = {};
 
-	const RATE = 300; // rate to simulate click
-	const DISTANCE = 70; // distance to move every update
-	const STOP = true; // stop player when no more input
-	const BUFFER_LENGTH = 120; // delay inputs if coming too fast
-	const DELAY = 10; // delays reading inputs so that movements aren't made when being spammed
-	const DEADZONE = .5; // distance on controller to ignore movement
+	const
+		RATE = 300, // rate to simulate click
+		DISTANCE = 70, // distance to move every update
+		STOP = true, // stop player when no more input
+		BUFFER_LENGTH = 120, // delay inputs if coming too fast
+		DELAY = 10, // delays reading inputs so that movements aren't made when being spammed
+		DEADZONE = .5; // distance on controller to ignore movement
 
 	let keyFunction = v => e => {
 		let dir = buttonMap[e.code];
