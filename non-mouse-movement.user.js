@@ -2,7 +2,7 @@
 // @name         Non-mouse Movement
 // @description  Move with keyboard or controller
 // @author       SArpnt
-// @version      2.0.1
+// @version      2.0.2
 // @namespace    https://boxcrittersmods.ga/authors/sarpnt/
 // @homepage     https://boxcrittersmods.ga/mods/non-mouse-movement/
 // @updateURL    https://github.com/SArpnt/non-mouse-movement/raw/master/non-mouse-movement.user.js
@@ -10,7 +10,7 @@
 // @supportURL   https://github.com/SArpnt/non-mouse-movement/issues
 // @icon         https://github.com/SArpnt/non-mouse-movement/raw/master/icon16.png
 // @icon64       https://github.com/SArpnt/non-mouse-movement/raw/master/icon64.png
-// @run-at       document-end
+// @run-at       document-start
 // @grant        none
 // @match        https://boxcritters.com/play/
 // @match        https://boxcritters.com/play/?*
@@ -116,22 +116,6 @@
 		}, lastInputTime - performance.now() + BUFFER_LENGTH);
 	}
 
-	createjs.Ticker.on("tick", function () {
-		if (!Object.keys(controllers).length) // if no controllers
-			return;
-		let g = navigator.getGamepads();
-		for (let i in controllers) {
-			let newIn = normalizeDead(g[i].axes.slice(0, 2)); // normalize
-			if (
-				!Array.isArray(controllers[i]) ||
-				!controllers[i].every((e, i) => e === newIn[i]) // if old isn't same as new
-			)
-				startUpdate( // move based on controller data
-					controllers[i] = newIn // set controller item
-				);
-		}
-	});
-
 	function normalizeDead(vec) {
 		let len = Math.sqrt(vec.map(e => e * e).reduce((a, b) => a + b));
 		return vec.map(len > DEADZONE ? (e => e / len) : (e => 0)); // normalized if outside deadzone
@@ -141,11 +125,29 @@
 		console.log(`Gamepad ${e.gamepad.index} connected`);
 		controllers[e.gamepad.index] = null;
 	});
-	let stage = document.getElementById('stage');
-	stage.setAttribute('tabindex', '0');
-	stage.style.outline = 'none';
-	stage.focus();
-	stage.addEventListener('click', _ => stage.focus());
-	stage.addEventListener('keydown', keyFunction(true));
-	stage.addEventListener('keyup', keyFunction(false));
+
+	window.addEventListener('load', function () {
+		createjs.Ticker.on("tick", function () {
+			if (!Object.keys(controllers).length) // if no controllers
+				return;
+			let g = navigator.getGamepads();
+			for (let i in controllers) {
+				let newIn = normalizeDead(g[i].axes.slice(0, 2)); // normalize
+				if (
+					!Array.isArray(controllers[i]) ||
+					!controllers[i].every((e, i) => e === newIn[i]) // if old isn't same as new
+				)
+					startUpdate( // move based on controller data
+						controllers[i] = newIn // set controller item
+					);
+			}
+		});
+		let stage = document.getElementById('stage');
+		stage.setAttribute('tabindex', '0');
+		stage.style.outline = 'none';
+		stage.focus();
+		stage.addEventListener('click', _ => stage.focus());
+		stage.addEventListener('keydown', keyFunction(true));
+		stage.addEventListener('keyup', keyFunction(false));
+	});
 })();
