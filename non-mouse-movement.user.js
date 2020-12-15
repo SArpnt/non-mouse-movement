@@ -2,7 +2,7 @@
 // @name         Non-mouse Movement
 // @description  Move with keyboard or controller
 // @author       SArpnt
-// @version      2.0.2
+// @version      2.0.3
 // @namespace    https://boxcrittersmods.ga/authors/sarpnt/
 // @homepage     https://boxcrittersmods.ga/mods/non-mouse-movement/
 // @updateURL    https://github.com/SArpnt/non-mouse-movement/raw/master/non-mouse-movement.user.js
@@ -12,12 +12,7 @@
 // @icon64       https://github.com/SArpnt/non-mouse-movement/raw/master/icon64.png
 // @run-at       document-start
 // @grant        none
-// @match        https://boxcritters.com/play/
-// @match        https://boxcritters.com/play/?*
-// @match        https://boxcritters.com/play/#*
-// @match        https://boxcritters.com/play/index.html
-// @match        https://boxcritters.com/play/index.html?*
-// @match        https://boxcritters.com/play/index.html#*
+// @include      /^https:\/\/boxcritters\.com\/play\/(index\.html)?([\?#].*)?$/
 // ==/UserScript==
 
 (function () {
